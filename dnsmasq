@@ -1,0 +1,19 @@
+#!/bin/bash
+
+if [ $EUID -ne 0 ]; then
+	echo Run this script $0 as root or sudo >&2
+	exit 1
+fi
+
+dnsmasq --strict-order \
+--interface=br0 \
+--listen-address=10.0.1.1 \
+--except-interface=lo \
+--except-interface=enp2s0 \
+--except-interface=wlp1s0 \
+--bind-interfaces \
+--dhcp-range=10.0.1.100,10.0.1.200 \
+--conf-file="" \
+--pid-file=/var/run/qemu-dnsmasq-br0.pid \
+--dhcp-leasefile=/var/run/qemu-dnsmasq-br0.lease \
+--dhcp-no-override

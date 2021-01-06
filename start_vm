@@ -1,0 +1,11 @@
+#!/bin/bash
+
+qemu-system-x86_64 \
+ -machine type=q35,accel=kvm \
+ -object rng-random,id=rng0,filename=/dev/urandom \
+ -device virtio-rng-pci,rng=rng0 \
+ -cpu host \
+ -smp $(($(nproc)/2+1)) -m 2048 \
+ -drive file=compile_machine.img,format=raw,index=0,media=disk \
+ -nic tap,ifname=tap0,script=no,downscript=no \
+ -curses
