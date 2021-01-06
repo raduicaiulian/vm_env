@@ -1,0 +1,1 @@
+qemu-img create -f qcow2 -b base_img.img snapshot.img
