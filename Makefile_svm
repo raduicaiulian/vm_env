@@ -1,0 +1,16 @@
+QEMU_OPTS = -machine type=q35,accel=kvm \
+        -object rng-random,id=rng0,filename=/dev/urandom \
+        -device virtio-rng-pci,rng=rng0 \
+        -cpu host \
+        -smp 4 -m 1536 \
+        -drive file=overlay.qcow,format=qcow2,index=0,media=disk \
+        -nic tap,ifname=tap0,script=no,downscript=no \
+        -curses
+
+boot:
+        sudo qemu-system-x86_64 $(QEMU_OPTS)
+
+gdb:
+        sudo qemu-system-x86_64 $(QEMU_OPTS) -s -S
+
+.PHONY: boot gdb

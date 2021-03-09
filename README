@@ -1,0 +1,11 @@
+#for live debuging we need to start first vm usimg "make boot"
+#after that, inside the first vm we need to create a second one:
+#  1.download the image for the second vm using(inside first vm):
+     wget https://download.freebsd.org/ftp/releases/VM-IMAGES/12.2-RELEASE/amd64/Latest/FreeBSD-12.2-RELEASE-amd64.qcow2.xz
+   2.extract it using:
+     unxz FreeBSD-12.2-RELEASE-amd64.qcow2.xz
+   3.copy Makefile_svm to first vm in the same path as the image from step 2 and rename it.
+#start the second vm using "make gdb"(the vm will start but will stay in a halt state until we attach the debugger)
+#in first vm run "kgdb" (after installing gdb)
+#into gdb type "target remote localhost:1234" (to attach to gdb remote server)
+#"continue" or or "c" to continue boot process
