@@ -7,7 +7,7 @@ QEMU_OPTS = -machine type=q35,accel=kvm \
         -device virtio-rng-pci,rng=rng0 \
         -cpu host \
         -smp 3 -m 1536 \
-        -drive file=overlay.img,format=raw,index=0,media=disk \
+        -drive file=overlay.qcow,format=qcow2,index=0,media=disk \
         -nic tap,ifname=tap0,script=no,downscript=no \
         -curses
 boot:
@@ -36,7 +36,7 @@ bridge:
 gdb:
         sudo qemu-system-x86_64 $(QEMU_OPTS) -s -S
 
-set: bridge dnsmask
+set: bridge dnsmasq
 
 dnsmasq:
         sudo dnsmasq --strict-order \
