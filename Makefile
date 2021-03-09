@@ -23,7 +23,7 @@ bridge:
         sudo ip link set br0 up
         sudo ip link set tap0 master br0
         #disable stp becouse there is only one bridge
-        sudo echo 0 > /sys/class/net/br0/bridge/stp_state
+        sudo bash -c "echo 0 > /sys/class/net/br0/bridge/stp_state"
         sudo ip addr add 10.0.1.1/24 dev br0
         #packet forwarding and NAT(enp2s0=network interface)
         sudo sysctl net.ipv4.conf.tap0.proxy_arp=1
