@@ -9,63 +9,95 @@ QEMU_OPTS = -machine type=q35,accel=kvm \
         -device virtio-rng-pci,rng=rng0 \
         -cpu host \
         -smp 2 -m 1024 \
-        -curses
+        -vga none -display none
+1VM_IP = 10.0.1.101
+2VM_IP = 10.0.1.102
+
 boot1vm:
-        sudo qemu-system-x86_64 $(QEMU_OPTS) $(VM1)
+        sudo qemu-system-x86_64 $(QEMU_OPTS) $(VM1) &
 boot2vm:
-        sudo qemu-system-x86_64 $(QEMU_OPTS) $(VM2)
+        sudo qemu-system-x86_64 $(QEMU_OPTS) $(VM2) &
 
 bridge:
-        #make tap interfaces
-        sudo ip tuntap add dev tap0 mode tap group kvm
-        sudo ip link set dev tap0 up
-        sudo ip addr add 0.0.0.0 dev tap0
+        if [ $$(ip addr | grep br0 | wc -l) -gt 3 ] ; then
+                echo "bridge already exist!!!";
+                echo "$$(ip addr | grep br0)";
+        else
+                #make tap interfaces
+                sudo ip tuntap add dev tap0 mode tap group kvm
+                sudo ip link set dev tap0 up
+                sudo ip addr add 0.0.0.0 dev tap0
 
-        sudo ip tuntap add dev tap1 mode tap group kvm
-        sudo ip link set dev tap1 up
-        sudo ip addr add 0.0.0.0 dev tap1
-        #make bridge:
-        sudo ip link add br0 type bridge
-        sudo ip link set br0 up
-        #add taps to brifge
-        sudo ip link set tap0 master br0
-        sudo ip link set tap1 master br0
-        #disable stp becouse there is only one bridge
-        #sudo bash -c "echo 0 > /sys/class/net/br0/bridge/stp_state"
-        sudo ip addr add 10.0.1.1/24 dev br0
-        #packet forwarding and NAT(enp2s0=network interface)
-        sudo sysctl net.ipv4.conf.tap0.proxy_arp=1
-        sudo sysctl net.ipv4.conf.tap1.proxy_arp=1
-        sudo sysctl net.ipv4.conf.enp2s0.proxy_arp=1
-        sudo sysctl net.ipv4.ip_forward=1 #enable forwarding in kernel
-        #firewall rules
-        sudo iptables -t nat -A POSTROUTING -o enp2s0 -j MASQUERADE
-        sudo iptables -A FORWARD -m state --state RELATED,ESTABLISHED -j ACCEPT
-        sudo iptables -A FORWARD -i br0 -o enp2s0 -j ACCEPT
+                sudo ip tuntap add dev tap1 mode tap group kvm
+                sudo ip link set dev tap1 up
+                sudo ip addr add 0.0.0.0 dev tap1
+                #make bridge:
+                sudo ip link add br0 type bridge
+                sudo ip link set br0 up
+                #add taps to brifge
+                sudo ip link set tap0 master br0
+                sudo ip link set tap1 master br0
+                #disable stp becouse there is only one bridge
+                #sudo bash -c "echo 0 > /sys/class/net/br0/bridge/stp_state"
+                sudo ip addr add 10.0.1.1/24 dev br0
+                #packet forwarding and NAT(enp2s0=network interface)
+                sudo sysctl net.ipv4.conf.tap0.proxy_arp=1
+                sudo sysctl net.ipv4.conf.tap1.proxy_arp=1
+                sudo sysctl net.ipv4.conf.enp2s0.proxy_arp=1
+                sudo sysctl net.ipv4.ip_forward=1 #enable forwarding in kernel
+                #firewall rules
+                sudo iptables -t nat -A POSTROUTING -o enp2s0 -j MASQUERADE
+                sudo iptables -A FORWARD -m state --state RELATED,ESTABLISHED -j ACCEPT
+                sudo iptables -A FORWARD -i br0 -o enp2s0 -j ACCEPT
+        fi
+
 gdb2vm:
-        sudo qemu-system-x86_64 $(QEMU_OPTS) $(VM2) -s -S
+        sudo qemu-system-x86_64 $(QEMU_OPTS) $(VM2) -s &# -S to stop execution at boot
 
-set: bridge dnsmasq
+debug:  bridge dnsmasq boot1vm gdb2vm
+        while [ 1 -eq 1 ] ; do echo "wait for 1 vm..."; ping -c1 $(1VM_IP) | grep -q " 1 received" && break; done; echo "1 vm is on"
+        while [ 1 -eq 1 ] ; do echo "wait for 2 vm..."; ping -c1 $(2VM_IP) | grep -q " 1 received" && break; done; echo "2 vm is on"
+        sleep 10
+        ssh -t root@$(1VM_IP) "gdb -ex 'target remote 192.168.1.243:1234' /boot/kernel/kernel"
 
 dnsmasq:
-        sudo dnsmasq --strict-order \
-                --interface=br0 \
-                --listen-address=10.0.1.1 \
-                --dhcp-host=52:54:00:12:34:50,10.0.1.101 \
-                --dhcp-host=52:54:00:12:34:51,10.0.1.102 \
-                --except-interface=lo \
-                --except-interface=enp2s0 \
-                --except-interface=wlp1s0 \
-                --bind-interfaces \
-                --dhcp-range=10.0.1.100,10.0.1.200 \
-                --conf-file="" \
-                --pid-file=/var/run/qemu-dnsmasq-br0.pid \
-                --dhcp-leasefile=/var/run/qemu-dnsmasq-br0.lease \
-                --dhcp-no-override
+        if [ $$(ps -e | grep dnsmasq | wc -l) -eq 1 ] ; then
+                echo "DHCP server already runing!!!";
+                echo $$(ps -e | grep dnsmasq);
+        else
+                sudo dnsmasq --strict-order \
+                        --interface=br0 \
+                        --listen-address=10.0.1.1 \
+                        --dhcp-host=52:54:00:12:34:50,$(1VM_IP) \
+                        --dhcp-host=52:54:00:12:34:51,$(2VM_IP) \
+                        --except-interface=lo \
+                        --except-interface=enp2s0 \
+                        --except-interface=wlp1s0 \
+                        --bind-interfaces \
+                        --dhcp-range=10.0.1.100,10.0.1.200 \
+                        --conf-file="" \
+                        --pid-file=/var/run/qemu-dnsmasq-br0.pid \
+                        --dhcp-leasefile=/var/run/qemu-dnsmasq-br0.lease \
+                        --dhcp-no-override
+        fi
 
 ssh1vm:
-        ssh root@10.0.1.151
+        ssh root@$(1VM_IP)
 ssh2vm:
-        ssh root@10.0.1.152
+        ssh root@$(2VM_IP)
+poweroff:
+        ping -c1 $(1VM_IP) | grep -q " 1 received" && ssh root@$(1VM_IP) poweroff
+        ping -c1 $(2VM_IP) | grep -q " 1 received" && ssh root@$(2VM_IP) poweroff
+        while [ true ] ; do
+                if [ $$(ps -e | grep qemu | wc -l) -eq 0 ] ; then
+                        break;
+                fi;
+        done;
+.PHONY: bridge boot1vm dnsmasq gdb2vm set ssh1vm ssh2vm debug
 
-.PHONY: bridge boot1vm dnsmasq gdb2vm set ssh1vm ssh2vm
+#to set in /etc/dnsmasq.conf
+#dhcp-host=eth0,00:22:43:4b:18:43,192.168.0.7
+#dhcp-host=eth1,00:22:43:4b:18:43,192.168.1.7
+
+.ONESHELL:
+.SILENT: dnsmasq bridge
