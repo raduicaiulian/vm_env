@@ -13,6 +13,8 @@ QEMU_OPTS = -machine type=q35,accel=kvm \
 1VM_IP = 10.0.1.101
 2VM_IP = 10.0.1.102
 
+set: bridge dnsmasq
+
 boot1vm:
         sudo qemu-system-x86_64 $(QEMU_OPTS) $(VM1) &
 boot2vm:
@@ -85,6 +87,7 @@ ssh1vm:
         ssh root@$(1VM_IP)
 ssh2vm:
         ssh root@$(2VM_IP)
+#fails if one of vms is paused by debugger
 poweroff:
         ping -c1 $(1VM_IP) | grep -q " 1 received" && ssh root@$(1VM_IP) poweroff
         ping -c1 $(2VM_IP) | grep -q " 1 received" && ssh root@$(2VM_IP) poweroff
@@ -93,11 +96,13 @@ poweroff:
                         break;
                 fi;
         done;
-.PHONY: bridge boot1vm dnsmasq gdb2vm set ssh1vm ssh2vm debug
+                
+.PHONY: bridge boot1vm boot2vm dnsmasq gdb2vm ssh1vm ssh2vm debug set
 
 #to set in /etc/dnsmasq.conf
 #dhcp-host=eth0,00:22:43:4b:18:43,192.168.0.7
 #dhcp-host=eth1,00:22:43:4b:18:43,192.168.1.7
 
-.ONESHELL:
+.ONESHELL:#required in order to write if/while as we were in a shell script
+.SILENT: dnsmasq bridge
 .SILENT: dnsmasq bridge
