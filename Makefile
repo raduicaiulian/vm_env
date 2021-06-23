@@ -106,3 +106,5 @@ poweroff:
 .ONESHELL:#required in order to write if/while as we were in a shell script
 .SILENT: dnsmasq bridge
 .SILENT: dnsmasq bridge
+
+#https://wiki.archlinux.org/title/QEMU#Creating_and_managing_snapshots_via_the_monitor_console
