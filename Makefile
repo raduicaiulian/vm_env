@@ -153,5 +153,5 @@ bridge:
 #dhcp-host=eth0,00:22:43:4b:18:43,192.168.0.7
 #dhcp-host=eth1,00:22:43:4b:18:43,192.168.1.7
 .ONESHELL:#required in order to write if/while as we were in a shell script(do not execut each line on a different shell instance)
-.SILENT: dnsmasq bridge boot1vm boot2vm ssh1vm ssh2vm poff1vm poff2vm status debug
+.SILENT: dnsmasq bridge boot1vm boot2vm ssh1vm ssh2vm poff1vm poff2vm status debug gdb1vm
 #https://wiki.ar/chlinux.org/title/QEMU#Creating_and_managing_snapshots_via_the_monitor_console
