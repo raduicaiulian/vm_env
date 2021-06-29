@@ -100,7 +100,11 @@ dnsmasq:
 	else
 		sudo dnsmasq --strict-order \
 			--interface=br0 \
-			--listen-address=1
+			--listen-address=10.0.1.1 \
+			--dhcp-host=52:54:00:12:34:50,$(1VM_IP) \
+			--dhcp-host=52:54:00:12:34:51,$(2VM_IP) \
+			--except-interface=lo \
+			--except-interface=enp2s0 \
 			--except-interface=wlp1s0 \
 			--bind-interfaces \
 			--dhcp-range=10.0.1.100,10.0.1.200 \
